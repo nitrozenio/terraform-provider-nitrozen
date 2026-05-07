@@ -1,16 +1,31 @@
 terraform {
   required_providers {
     nitrozen = {
-      source = "girishadhithya/nitrozen"
+      source = "nitrozenio/nitrozen"
     }
   }
 }
 
+# Set NITROZEN_TOKEN env var or pass token directly (do not commit tokens)
 provider "nitrozen" {
-  token = "18|FwMwS1mqD0YL7KoHP78R5WNVmpLnqgjwVyf0u60x9564b830"
+  token = var.nitrozen_token
 }
 
-resource "nitrozen_project" "test" {
-  name        = "new Name"
-  description = "new Description"
+variable "nitrozen_token" {
+  description = "Nitrozen API token"
+  type        = string
+  sensitive   = true
+}
+
+resource "nitrozen_project" "example" {
+  name        = "My Changelog"
+  description = "Product updates and release notes"
+}
+
+resource "nitrozen_entry" "example" {
+  project_id   = nitrozen_project.example.id
+  title        = "Initial release"
+  content      = "We launched! Here's what's included."
+  category     = "new"
+  is_published = true
 }

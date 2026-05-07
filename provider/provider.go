@@ -25,10 +25,12 @@ func (p *NitrozenProvider) Metadata(ctx context.Context, req provider.MetadataRe
 
 func (p *NitrozenProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Use the Nitrozen provider to manage changelog projects and entries via the Nitrozen.io API.",
 		Attributes: map[string]schema.Attribute{
 			"token": schema.StringAttribute{
-				Required:  true,
-				Sensitive: true,
+				Required:    true,
+				Sensitive:   true,
+				Description: "Your Nitrozen API token. Can also be set via the NITROZEN_TOKEN environment variable.",
 			},
 		},
 	}
@@ -64,6 +66,7 @@ func (p *NitrozenProvider) Configure(ctx context.Context, req provider.Configure
 func (p *NitrozenProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		resources.NewProjectResource,
+		resources.NewEntryResource,
 	}
 }
 

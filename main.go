@@ -10,7 +10,7 @@ import (
 
 func main() {
 	err := providerserver.Serve(context.Background(), provider.New, providerserver.ServeOpts{
-		Address: "registry.terraform.io/Girishadhithya/nitrozen",
+		Address: "registry.terraform.io/nitrozenio/nitrozen",
 	})
 
 	if err != nil {

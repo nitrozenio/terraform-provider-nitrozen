@@ -1,0 +1,22 @@
+# Compiled binaries
+*.exe
+*.dll
+*.so
+*.dylib
+terraform-provider-nitrozen
+
+# Terraform state (may contain secrets)
+**/*.tfstate
+**/*.tfstate.backup
+**/.terraform/
+**/.terraform.lock.hcl
+
+# Local dev override (contains machine-specific paths)
+.terraformrc
+
+# Build output
+dist/
+bin/
+
+# OS
+.DS_Store

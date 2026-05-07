@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 const BaseURL = "https://nitrozen.io/api/v1"
@@ -17,8 +18,10 @@ type Client struct {
 
 func NewClient(token string) *Client {
 	return &Client{
-		Token:      token,
-		HTTPClient: &http.Client{},
+		Token: token,
+		HTTPClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
 	}
 }
 
@@ -39,10 +42,9 @@ func (c *Client) DoRequest(method, path string, body interface{}) ([]byte, error
 		return nil, err
 	}
 
-	// ✅ Headers
 	req.Header.Set("Authorization", "Bearer "+c.Token)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json") // 🔥 IMPORTANT (fixes HTML issue)
+	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
@@ -55,13 +57,6 @@ func (c *Client) DoRequest(method, path string, body interface{}) ([]byte, error
 		return nil, err
 	}
 
-	// 🔍 DEBUG (VERY IMPORTANT)
-	fmt.Println("---- API RESPONSE ----")
-	fmt.Println("Status:", resp.StatusCode)
-	fmt.Println(string(respBytes))
-	fmt.Println("----------------------")
-
-	// ❌ Handle non-2xx properly
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("API error %d: %s", resp.StatusCode, string(respBytes))
 	}
@@ -76,37 +71,60 @@ func ExtractID(body []byte) (int64, error) {
 		} `json:"data"`
 	}
 
-	err := json.Unmarshal(body, &result)
-	if err != nil {
-		// 🔥 SHOW RAW RESPONSE IF JSON FAILS
-		return 0, fmt.Errorf("failed to parse JSON. Raw response: %s", string(body))
+	if err := json.Unmarshal(body, &result); err != nil {
+		return 0, fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	if result.Data.ID == 0 {
-		return 0, fmt.Errorf("invalid response: missing ID. Raw: %s", string(body))
+		return 0, fmt.Errorf("invalid response: missing ID")
 	}
 
 	return result.Data.ID, nil
 }
 
-func (c *Client) GetProject(id int64) ([]byte, error) {
-	path := fmt.Sprintf("/projects/%d", id)
-	return c.DoRequest("GET", path, nil)
-}
+// Project methods
 
-func (c *Client) DeleteProject(id int64) error {
-	path := fmt.Sprintf("/projects/%d", id)
-	_, err := c.DoRequest("DELETE", path, nil)
-	return err
+func (c *Client) GetProject(id int64) ([]byte, error) {
+	return c.DoRequest("GET", fmt.Sprintf("/projects/%d", id), nil)
 }
 
 func (c *Client) UpdateProject(id int64, name, description string) ([]byte, error) {
-	path := fmt.Sprintf("/projects/%d", id)
-
-	body := map[string]string{
+	return c.DoRequest("PUT", fmt.Sprintf("/projects/%d", id), map[string]string{
 		"name":        name,
 		"description": description,
-	}
+	})
+}
 
-	return c.DoRequest("PUT", path, body)
+func (c *Client) DeleteProject(id int64) error {
+	_, err := c.DoRequest("DELETE", fmt.Sprintf("/projects/%d", id), nil)
+	return err
+}
+
+// Entry methods
+
+func (c *Client) CreateEntry(projectID int64, title, content, category string, isPublished bool) ([]byte, error) {
+	return c.DoRequest("POST", fmt.Sprintf("/projects/%d/entries", projectID), map[string]interface{}{
+		"title":        title,
+		"content":      content,
+		"category":     category,
+		"is_published": isPublished,
+	})
+}
+
+func (c *Client) GetEntry(projectID, entryID int64) ([]byte, error) {
+	return c.DoRequest("GET", fmt.Sprintf("/projects/%d/entries/%d", projectID, entryID), nil)
+}
+
+func (c *Client) UpdateEntry(projectID, entryID int64, title, content, category string, isPublished bool) ([]byte, error) {
+	return c.DoRequest("PUT", fmt.Sprintf("/projects/%d/entries/%d", projectID, entryID), map[string]interface{}{
+		"title":        title,
+		"content":      content,
+		"category":     category,
+		"is_published": isPublished,
+	})
+}
+
+func (c *Client) DeleteEntry(projectID, entryID int64) error {
+	_, err := c.DoRequest("DELETE", fmt.Sprintf("/projects/%d/entries/%d", projectID, entryID), nil)
+	return err
 }

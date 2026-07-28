@@ -54,7 +54,7 @@ func (r *EntryResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			},
 			"category": schema.StringAttribute{
 				Required:    true,
-				Description: "The category of the entry. One of: new, improvement, fix, announcement.",
+				Description: "The category slug for the entry. Every project has the built-in categories new, improvement, fix, and announcement; projects with custom categories enabled may also have additional project-specific slugs.",
 			},
 			"is_published": schema.BoolAttribute{
 				Optional:    true,

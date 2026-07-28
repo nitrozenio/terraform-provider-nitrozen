@@ -41,11 +41,14 @@ resource "nitrozen_entry" "draft" {
 - `project_id` (Required) — The ID of the parent project. Changing this forces a new resource.
 - `title` (Required) — The title of the changelog entry.
 - `content` (Required) — The body content of the entry. Markdown is supported.
-- `category` (Required) — The category of the entry. Must be one of:
+- `category` (Required) — The category slug for the entry. Every project has these built-in categories:
   - `new` — New features
   - `improvement` — Improvements to existing features
   - `fix` — Bug fixes
   - `announcement` — General announcements
+
+  Projects on a plan with custom categories enabled may also define additional project-specific
+  slugs from the dashboard — any of those slugs are valid here too.
 - `is_published` (Optional) — Whether the entry is publicly visible. Defaults to `false`.
 
 ## Attributes Reference

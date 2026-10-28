@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -39,6 +41,13 @@ func (r *ProjectResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Optional:    true,
 				Description: "An optional description for the project.",
 			},
+			"public_url": schema.StringAttribute{
+				Computed:    true,
+				Description: "The URL of the project's public changelog page: https://<custom_domain> when a custom domain is verified, otherwise https://nitrozen.io/c/<slug>.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 		},
 	}
 }
@@ -55,6 +64,23 @@ type ProjectModel struct {
 	ID          types.Int64  `tfsdk:"id"`
 	Name        types.String `tfsdk:"name"`
 	Description types.String `tfsdk:"description"`
+	PublicURL   types.String `tfsdk:"public_url"`
+}
+
+// projectAPIResponse is the shape of a single-project API response.
+type projectAPIResponse struct {
+	Data struct {
+		ID          int64  `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		PublicURL   string `json:"public_url"`
+	} `json:"data"`
+}
+
+func parseProjectResponse(body []byte) (projectAPIResponse, error) {
+	var result projectAPIResponse
+	err := json.Unmarshal(body, &result)
+	return result, err
 }
 
 // ✅ FIXED CREATE
@@ -89,11 +115,18 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	created, err := parseProjectResponse(body)
+	if err != nil {
+		resp.Diagnostics.AddError("Parse Error", err.Error())
+		return
+	}
+
 	// ✅ Build state PROPERLY
 	state := ProjectModel{
 		ID:          types.Int64Value(id),
 		Name:        plan.Name,
 		Description: plan.Description,
+		PublicURL:   types.StringValue(created.Data.PublicURL),
 	}
 
 	// ✅ VERY IMPORTANT: capture diagnostics
@@ -120,15 +153,7 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	var result struct {
-		Data struct {
-			ID          int64  `json:"id"`
-			Name        string `json:"name"`
-			Description string `json:"description"`
-		} `json:"data"`
-	}
-
-	err = json.Unmarshal(body, &result)
+	result, err := parseProjectResponse(body)
 	if err != nil {
 		resp.Diagnostics.AddError("Parse Error", err.Error())
 		return
@@ -137,6 +162,7 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	state.ID = types.Int64Value(result.Data.ID)
 	state.Name = types.StringValue(result.Data.Name)
 	state.Description = types.StringValue(result.Data.Description)
+	state.PublicURL = types.StringValue(result.Data.PublicURL)
 
 	resp.State.Set(ctx, &state)
 }
@@ -164,19 +190,16 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	var result struct {
-		Data struct {
-			ID          int64  `json:"id"`
-			Name        string `json:"name"`
-			Description string `json:"description"`
-		} `json:"data"`
+	result, err := parseProjectResponse(body)
+	if err != nil {
+		resp.Diagnostics.AddError("Parse Error", err.Error())
+		return
 	}
-
-	json.Unmarshal(body, &result)
 
 	state.ID = types.Int64Value(result.Data.ID)
 	state.Name = types.StringValue(result.Data.Name)
 	state.Description = types.StringValue(result.Data.Description)
+	state.PublicURL = types.StringValue(result.Data.PublicURL)
 
 	resp.State.Set(ctx, &state)
 }

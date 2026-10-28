@@ -27,6 +27,7 @@ resource "nitrozen_project" "example" {
 In addition to all arguments above, the following attributes are exported:
 
 - `id` — The unique integer ID of the project.
+- `public_url` — The URL of the project's public changelog page: `https://<custom_domain>` when a custom domain is verified, otherwise `https://nitrozen.io/c/<slug>`. Read-only.
 
 ## Import
 
